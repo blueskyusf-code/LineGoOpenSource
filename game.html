@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; background: #1a1a1a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: #000; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; }
+        .lvl { color: #888; font-size: 12px; word-break: break-all; width: 90vw; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div>Points: <span id="score">0</span></div>
+        <div class="lvl">Level: <span id="level">1</span></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const levelEl = document.getElementById('level');
+
+    // Configurações do Jogo
+    let score = 0;
+    let level = BigInt(1);
+    const maxLevel = BigInt("387374837374747373774387483747373737374647474774736474647474747474774747484747474738364746476428638364747374747373647473772737474737374647474774727374747373637473773747474737723756484747373747384747377438747474747473736373737737474747373737643874387474747474737737374747474747477473736473647474764737474747474774737374748373774747474747377373747473737373737733773746583638548364736474747474737374738464747474774477483736474747474747");
+
+    let canvasW, canvasH;
+    let ball = { x: 0, y: 0, r: 20, targetY: 0 };
+    let square = { x: 0, y: 0, size: 30 };
+    let tongue = { active: false, length: 0, targetX: 0, targetY: 0 };
+    let isGameOver = false;
+
+    function init() {
+        canvasW = canvas.width = window.innerWidth;
+        canvasH = canvas.height = window.innerHeight;
+        ball.x = canvasW / 2;
+        ball.y = canvasH / 2;
+        spawnSquare();
+    }
+
+    function spawnSquare() {
+        // Quadrados aparecem apenas no eixo vertical (frente/trás)
+        square.x = ball.x; 
+        square.y = Math.random() * (canvasH - 100) + 50;
+        // Se estiver muito perto da bola, tenta de novo
+        if (Math.abs(square.y - ball.y) < 100) spawnSquare();
+    }
+
+    // Controle de Toque
+    window.addEventListener('touchstart', (e) => {
+        if (isGameOver) return location.reload();
+        
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+
+        // REGRA DE MORTE: Se tentar clicar/ir pro lado, perde!
+        if (Math.abs(touchX - ball.x) > ball.r + 20) {
+            endGame("Morreu! Não pode ir para os lados.");
+            return;
+        }
+
+        // Dispara a língua
+        tongue.active = true;
+        tongue.targetY = touchY;
+    });
+
+    function endGame(msg) {
+        isGameOver = true;
+        alert(msg);
+    }
+
+    function update() {
+        if (isGameOver) return;
+
+        if (tongue.active) {
+            // Lógica da língua pegando o quadrado
+            const dist = square.y - ball.y;
+            if (Math.abs(tongue.targetY - square.y) < 40) {
+                score++;
+                ball.r += 2; // Cresce a cada ponto
+                scoreEl.innerText = score;
+                
+                // Sistema de Níveis
+                if (score % 5 === 0) {
+                    level++;
+                    levelEl.innerText = level.toString();
+                    if (level >= maxLevel) {
+                        endGame("BURACO NEGRO ATIVADO!"); // Aqui entraria sua animação cinematográfica
+                    }
+                }
+                spawnSquare();
+            }
+            tongue.active = false;
+        }
+    }
+
+    function draw() {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvasW, canvasH);
+
+        // Desenha Quadrado (Alvo)
+        ctx.fillStyle = "#00ff00";
+        ctx.fillRect(square.x - square.size/2, square.y - square.size/2, square.size, square.size);
+
+        // Desenha Língua
+        if (tongue.active) {
+            ctx.strokeStyle = "#ff66aa";
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(ball.x, ball.y);
+            ctx.lineTo(ball.x, tongue.targetY);
+            ctx.stroke();
+        }
+
+        // Desenha a Bola Cinza (Personagem do LineGo)
+        ctx.fillStyle = "#888";
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Olhinhos para dar personalidade
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(ball.x - 5, ball.y - 5, 3, 0, Math.PI * 2);
+        ctx.arc(ball.x + 5, ball.y - 5, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        requestAnimationFrame(() => {
+            update();
+            draw();
+        });
+    }
+
+    window.addEventListener('resize', init);
+    init();
+    draw();
+</script>
+</body>
+</html>
